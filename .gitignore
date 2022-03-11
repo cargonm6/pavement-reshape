@@ -1,0 +1,9 @@
+# Ignore PyCharm files
+.idea/
+
+# Ignore virtual Python environments
+venv/
+
+# Ignore data files
+*.png
+*.jpg
