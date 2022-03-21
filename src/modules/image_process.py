@@ -5,23 +5,36 @@ import numpy as np
 
 
 def image_read(p_file):
+    """
+    Read image from file
+    :param p_file: input file
+    :return: output image
+    """
     p_image = cv2.imread(p_file)
     return p_image
 
 
-def image_distortion(p_image, p_calibration=None):
-    if p_calibration is not None:
+def image_distortion(p_image, p_calibration=False, p_parameters=None):
+    """
+    Remove image distortion
+    :param p_image: input image
+    :param p_calibration: boolean calibration option
+    :param p_parameters: calibration parameters
+    :return: output image
+    """
+    if not p_calibration:
+        return p_image
+
+    elif p_calibration and p_parameters is not None:
         ret, mtx, dist, rvecs, tvecs = p_calibration
         p_height, p_width = p_image.shape[:2]
-        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (p_width, p_height), 1, (p_width, p_height))
+        new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (p_width, p_height), 1, (p_width, p_height))
+        p_image = cv2.undistort(p_image, mtx, dist, None, new_camera_mtx)
+        x, y, w, h = roi  # crop the image
+        p_image = p_image[y:y + h, x:x + w]
+        return p_image
 
-        dst = cv2.undistort(p_image, mtx, dist, None, newcameramtx)
-        # crop the image
-        x, y, w, h = roi
-        dst = dst[y:y + h, x:x + w]
-        return dst
     else:
-
         dist_coef = np.zeros((4, 1), np.float64)
 
         # negative to remove barrel distortion
@@ -49,18 +62,34 @@ def image_distortion(p_image, p_calibration=None):
 
 
 def image_slice(p_image):
-    # Top, bottom, left, right
-    # margin = [0, 0, p_image.shape[1] - p_image.shape[1] // 8, 0]
-    margin = [0, p_image.shape[0] - p_image.shape[0] // 4, 0, 0]
-
+    """
+    Cut input image borders
+    :param p_image: input image
+    :return: output image
+    """
+    margin = [0, p_image.shape[0] - p_image.shape[0] // 4, 0, 0]  # Top, bottom, left, right
     return p_image[(0 + margin[0]):(p_image.shape[0] - margin[1]), (0 + margin[2]):(p_image.shape[1] - margin[3])]
 
 
 def image_save(p_path, p_name, p_image):
+    """
+    Save image to path
+    :param p_path: destination path
+    :param p_name: destination filename
+    :param p_image: input image
+    :return:
+    """
     cv2.imwrite(p_path + p_name, p_image)
 
 
-def main(project_root, calibration):
+def main(project_root, calibration=False, calibration_params=None):
+    """
+    Main function for image processing
+    :param project_root: root path of the project
+    :param calibration: boolean calibration option
+    :param calibration_params: calibration parameters
+    :return:
+    """
     path_origin = project_root + "/res/0_source/"
     path_distor = project_root + "/res/1_distor/"
     path_joined = project_root + "/res/2_joined/"
@@ -79,7 +108,7 @@ def main(project_root, calibration):
         count += 1
 
         image_origin = image_read(f_list[n])
-        image_distor = image_distortion(image_origin, calibration)
+        image_distor = image_distortion(image_origin, calibration, calibration_params)
         image_sliced = image_slice(image_distor)
 
         image_save(path_distor, os.path.basename(f_list[n]), image_distor)

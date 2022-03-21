@@ -5,6 +5,11 @@ import numpy as np
 
 
 def main(project_root):
+    """
+    Main function of image calibration
+    :param project_root: root path of the project
+    :return: calibration parameters
+    """
     # termination criteria
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     board_corners = (9, 6)
