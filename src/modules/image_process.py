@@ -14,6 +14,13 @@ def image_read(p_file):
     return p_image
 
 
+def image_histogram(p_image):
+    ycrcb_img = cv2.cvtColor(p_image, cv2.COLOR_BGR2YCrCb)
+    ycrcb_img[:, :, 0] = cv2.equalizeHist(ycrcb_img[:, :, 0])
+    p_image = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
+    return p_image
+
+
 def image_distortion(p_image, p_calibration=False, p_parameters=None):
     """
     Remove image distortion
@@ -26,7 +33,7 @@ def image_distortion(p_image, p_calibration=False, p_parameters=None):
         return p_image
 
     elif p_calibration and p_parameters is not None:
-        ret, mtx, dist, rvecs, tvecs = p_calibration
+        ret, mtx, dist, rvecs, tvecs = p_parameters
         p_height, p_width = p_image.shape[:2]
         new_camera_mtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (p_width, p_height), 1, (p_width, p_height))
         p_image = cv2.undistort(p_image, mtx, dist, None, new_camera_mtx)
@@ -91,10 +98,11 @@ def main(project_root, calibration=False, calibration_params=None):
     :return:
     """
     path_origin = project_root + "/res/0_source/"
-    path_distor = project_root + "/res/1_distor/"
-    path_joined = project_root + "/res/2_joined/"
-    path_sliced = project_root + "/res/3_sliced/"
-    path_concat = project_root + "/res/4_concat/"
+    path_equali = project_root + "/res/1_equali/"
+    path_distor = project_root + "/res/2_distor/"
+    path_joined = project_root + "/res/3_joined/"
+    path_sliced = project_root + "/res/4_sliced/"
+    path_concat = project_root + "/res/5_concat/"
     f_list = []
 
     for root, dirs, files in os.walk(path_origin):
@@ -108,18 +116,20 @@ def main(project_root, calibration=False, calibration_params=None):
         count += 1
 
         image_origin = image_read(f_list[n])
-        image_distor = image_distortion(image_origin, calibration, calibration_params)
-        image_sliced = image_slice(image_distor)
+        image_equali = image_histogram(image_origin)
+        image_distor = image_distortion(image_equali, calibration, calibration_params)
+        # image_sliced = image_slice(image_distor)
 
+        image_save(path_equali, os.path.basename(f_list[n]), image_equali)
         image_save(path_distor, os.path.basename(f_list[n]), image_distor)
         image_save(path_joined, os.path.basename(f_list[n]), np.concatenate(
             (image_origin, cv2.resize(image_distor, dsize=(image_origin.shape[1], image_origin.shape[0]),
                                       interpolation=cv2.INTER_CUBIC)), axis=1))
-        image_save(path_sliced, os.path.basename(f_list[n]), image_sliced)
+        # image_save(path_sliced, os.path.basename(f_list[n]), image_sliced)
 
-        list_sliced.append(image_sliced)
+        # list_sliced.append(image_sliced)
 
-        if count % 3 == 0:
-            p_size = 3
-            p_axis = 0  # 0/1: horizontal/vertical
-            image_save(path_concat, os.path.basename(f_list[n]), np.concatenate(list_sliced[-p_size:], axis=p_axis))
+        # if count % 3 == 0:
+        #     p_size = 3
+        #     p_axis = 0  # 0/1: horizontal/vertical
+        #     image_save(path_concat, os.path.basename(f_list[n]), np.concatenate(list_sliced[-p_size:], axis=p_axis))

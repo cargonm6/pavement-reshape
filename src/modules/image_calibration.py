@@ -12,7 +12,7 @@ def main(project_root):
     """
     # termination criteria
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    board_corners = (9, 6)
+    board_corners = (7, 7)
 
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
     objp = np.zeros((np.prod(board_corners), 3), np.float32)
@@ -47,7 +47,7 @@ def main(project_root):
 
             # Draw and display the corners
             cv.drawChessboardCorners(img, board_corners, corners2, ret)
-            cv.imshow('img', img)
+            cv.imshow('img', cv.resize(img, (612, 262)))
             cv.waitKey(250)
 
     cv.destroyAllWindows()
