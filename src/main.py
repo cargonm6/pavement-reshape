@@ -29,7 +29,7 @@ def main(project_root):
     print("\U00002594" * 21)
 
     if input(txt_f("Clear last results? [Y, y] \U000000BB ", 1)) in ("Y", "y"):
-        d_list = ["/res/1_distor/", "/res/2_joined/", "/res/3_sliced/", "/res/4_concat/"]
+        d_list = ["/res/1_filter/", "/res/2_distor/", "/res/3_joined/", "/res/4_sliced/", "/res/5_concat/"]
 
         for directory in d_list:
             for root, dirs, files in os.walk(project_root + directory):
@@ -40,7 +40,7 @@ def main(project_root):
         print(txt_f("Last results preserved.\n", 3))
 
     if input(txt_f("Apply image calibration? [Y, y] \U000000BB ", 1)) in ("Y", "y"):
-        if input(txt_f("Use existing calibration pattern? [Y, y] \U000000BB ", 2)) in ("y", "y"):
+        if input(txt_f("Use existing calibration pattern? [Y, y] \U000000BB ", 2)) in ("Y", "y"):
             calibration_params = image_calibration.main(project_root)
             if calibration_params is not None:
                 print(txt_f("Automatic calibration will be used.", 3))

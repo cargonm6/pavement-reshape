@@ -1,3 +1,4 @@
+import math
 import os
 
 import cv2
@@ -14,10 +15,62 @@ def image_read(p_file):
     return p_image
 
 
+def remove_shadows(p_image):
+    # https://stackoverflow.com/questions/44752240/how-to-remove-shadow-from-scanned-images-using-opencv
+
+    rgb_planes = cv2.split(p_image)
+
+    # result_planes = []
+    result_norm_planes = []
+    for plane in rgb_planes:
+        dilated_img = cv2.dilate(plane, np.ones((7, 7), np.uint8))
+        bg_img = cv2.medianBlur(dilated_img, 21)
+        diff_img = 255 - cv2.absdiff(plane, bg_img)
+        norm_img = cv2.normalize(diff_img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
+        # result_planes.append(diff_img)
+        result_norm_planes.append(norm_img)
+
+    # p_image = cv2.merge(result_planes)
+    p_image = cv2.merge(result_norm_planes)
+
+    return p_image
+
+
+def gamma_correction(p_image):
+    # https://stackoverflow.com/questions/61695773/how-to-set-the-best-value-for-gamma-correction
+    # METHOD 2: HSV (or other color spaces)
+
+    # convert img to HSV
+    hsv = cv2.cvtColor(p_image, cv2.COLOR_BGR2HSV)
+    hue, sat, val = cv2.split(hsv)
+
+    # compute gamma = log(mid*255)/log(mean)
+    mid = 0.5
+    mean = np.mean(val)
+    gamma = math.log(mid * 255) / math.log(mean)
+
+    # do gamma correction on value channel
+    val_gamma = np.power(val, gamma).clip(0, 255).astype(np.uint8)
+
+    # combine new value channel with original hue and sat channels
+    hsv_gamma = cv2.merge([hue, sat, val_gamma])
+    p_image = cv2.cvtColor(hsv_gamma, cv2.COLOR_HSV2BGR)
+
+    return p_image
+
+
 def image_histogram(p_image):
     ycrcb_img = cv2.cvtColor(p_image, cv2.COLOR_BGR2YCrCb)
     ycrcb_img[:, :, 0] = cv2.equalizeHist(ycrcb_img[:, :, 0])
     p_image = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
+
+    return p_image
+
+
+def image_filtered(p_image):
+    # p_image = gamma_correction(p_image)
+    # p_image = image_histogram(p_image)
+    p_image = remove_shadows(p_image)
     return p_image
 
 
@@ -98,29 +151,29 @@ def main(project_root, calibration=False, calibration_params=None):
     :return:
     """
     path_origin = project_root + "/res/0_source/"
-    path_equali = project_root + "/res/1_equali/"
+    path_filter = project_root + "/res/1_filter/"
     path_distor = project_root + "/res/2_distor/"
     path_joined = project_root + "/res/3_joined/"
-    path_sliced = project_root + "/res/4_sliced/"
-    path_concat = project_root + "/res/5_concat/"
+    # path_sliced = project_root + "/res/4_sliced/"
+    # path_concat = project_root + "/res/5_concat/"
     f_list = []
 
     for root, dirs, files in os.walk(path_origin):
         for f in files:
             f_list.append((os.path.join(root, f)).replace("\\", "/")) if not f.startswith(".") else 0
 
-    list_sliced = []
+    # list_sliced = []
     count = 0
 
     for n in range(0, len(f_list)):
         count += 1
 
         image_origin = image_read(f_list[n])
-        image_equali = image_histogram(image_origin)
-        image_distor = image_distortion(image_equali, calibration, calibration_params)
+        image_filter = image_filtered(image_origin)
+        image_distor = image_distortion(image_filter, calibration, calibration_params)
         # image_sliced = image_slice(image_distor)
 
-        image_save(path_equali, os.path.basename(f_list[n]), image_equali)
+        image_save(path_filter, os.path.basename(f_list[n]), image_filter)
         image_save(path_distor, os.path.basename(f_list[n]), image_distor)
         image_save(path_joined, os.path.basename(f_list[n]), np.concatenate(
             (image_origin, cv2.resize(image_distor, dsize=(image_origin.shape[1], image_origin.shape[0]),
